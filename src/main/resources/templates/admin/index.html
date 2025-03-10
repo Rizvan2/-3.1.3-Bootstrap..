@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Panel</title>
+    <!-- Подключаем jQuery (если нужен для других целей) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Подключаем Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Подключаем Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .sidebar {
+
+            height: 100vh;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            padding-left: 30px;
+            padding-bottom: 40px; /* Добавляем отступ снизу для sidebar */
+        }
+
+        .content {
+            padding: 0;
+        }
+
+        .user-card {
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .user-card:hover {
+            background-color: #e9ecef;
+            cursor: pointer;
+        }
+
+        .nav-link.active {
+            background-color: blue; /* Синий фон */
+            color: white !important; /* Белый текст */
+        }
+
+        .btn-custom {
+            color: blue;
+            background-color: transparent;
+            border: 1px solid transparent; /* Прозрачная граница по умолчанию */
+            padding: 10px 20px;
+            transition: color 0.3s, background-color 0.3s;
+            box-sizing: border-box;
+            margin-right: -4px;
+        }
+
+        .btn-custom:hover {
+            outline: 1px solid #dee2e6; /* Граница при наведении */
+        }
+
+        .btn-custom.active {
+            color: dimgray; /* Цвет текста при активности */
+            background-color: white; /* Цвет фона при активности */
+            border: 1px solid #dee2e6; /* Прозрачная граница по умолчанию */
+        }
+
+        .table-header {
+            border: 1px solid #dee2e6; /* Граница со всех сторон */
+            border-radius: 5px; /* Скругленные углы */
+            padding: 10px; /* Внутренние отступы */
+            margin-bottom: 20px; /* Отступ снизу */
+            background-color: #f8f9fa; /* Цвет фона, как у кнопки */
+        }
+
+        .table-header h3 {
+            text-indent: 15px;
+            margin: 0; /* Убираем отступы у заголовка */
+            font-size: 1.5rem; /* Размер шрифта заголовка */
+            color: #333; /* Цвет текста заголовка */
+        }
+
+        .divider {
+            border-top: 1px solid #dee2e6; /* Разделяющая черта */
+            margin: 0; /* Отступы сверху и снизу разделителя */
+        }
+
+        .table {
+            width: 1500px;
+            margin-bottom: 40px; /* Убираем отступ снизу у таблицы */
+            margin-left: 20px; /* Оставляем отступ слева */
+        }
+
+        .table-container {
+            border: 1px solid #dee2e6; /* Граница со всех сторон */
+            border-radius: 5px; /* Скругленные углы */
+            background-color: #ffffff; /* Белый фон */
+            margin-bottom: 40px; /* Отступ снизу */
+            margin-right: 20px;
+        }
+
+        .custom-checkbox {
+            display: none; /* Скрываем стандартный чекбокс */
+        }
+
+        .custom-checkbox-label {
+            transition: background-color 0.3s, color 0.3s; /* Плавный переход */
+            font-size: 15px;
+            margin: 0;
+        }
+
+        .custom-checkbox:checked + .custom-checkbox-label {
+            background-color: blue; /* Цвет фона при нажатии */
+            color: white; /* Белый текст при отмеченном состоянии */
+        }
+
+        .custom-checkbox-label.gray-bg {
+            background-color: #f8f9fa; /* Серый фон при снятии выделения */
+            color: #333; /* Темно-серый текст */
+        }
+
+        .modal-body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .custom-link {
+            color: #808080; /* Серый цвет */
+            text-decoration: none; /* Убираем подчеркивание */
+        }
+
+        .custom-link:hover {
+            color: #606060; /* Цвет при наведении */
+        }
+
+    </style>
+
+</head>
+<body>
+<!-- Блок с информацией о текущем пользователе -->
+<div class="row p-0 m-0">
+    <div class="col-12 p-0 m-0">
+        <div class="d-flex align-items-center px-3 py-2 bg-dark text-white"
+             style="min-height: 45px;">
+            <p class="mb-0 fs-5">
+                <strong th:text="${currentUser.email}"></strong> <!-- Email текущего пользователя -->
+                <span> with roles:</span>
+                <span th:text="${currentUser.hasRole('ROLE_ADMIN') ? 'ADMIN' : ''} + ${currentUser.hasRole('ROLE_USER') ? ' USER' : ''}"></span>
+            </p>
+            <a th:href="@{/logout}" class="custom-link ms-auto fs-4">Logout</a>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 content">
+            <br>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link"
+                       th:classappend="${#httpServletRequest.requestURI == '/admin' ? 'active' : ''}"
+                       th:href="@{/admin(id=${currentUser.id})}">Admin</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link"
+                       th:classappend="${#httpServletRequest.requestURI == '/admin/user' ? 'active' : ''}"
+                       th:href="@{/admin/user(id=${currentUser.id})}">User</a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Content -->
+        <div class="col-md-10 sidebar">
+            <br>
+            <h1>Admin Panel</h1>
+            <button
+                    class="btn-custom"
+                    id="userTableButton"
+                    th:classappend="${#httpServletRequest.requestURI == '/admin' ? 'active' : ''}"
+                    onclick="showTable();">
+                User table
+            </button><!--
+         -->
+            <button
+                    class="btn-custom"
+                    id="newUserButton"
+                    onclick="showNewUserForm();">
+                New User
+            </button>
+            <div class="table-container" id="tableContainer">
+                <div class="table-header">
+                    <h3>All users</h3>
+                    <hr class="divider">
+                </div>
+
+                <table class="table bordered">
+                    <thead>
+                    <tr class="border-top">
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Edit</th>
+                        <th>Delete</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="usereach : ${users}"
+                        th:class="${usereach.hasRole('ROLE_ADMIN')} ? 'table-secondary' : ''">
+                        <td class="align-middle" th:text="${usereach.id}"></td>
+                        <td class="align-middle" th:text="${usereach.username}"></td>
+                        <td class="align-middle" th:text="${usereach.email}"></td>
+                        <td class="align-middle"
+                            th:text="${usereach.hasRole('ROLE_ADMIN') ? 'ADMIN' : ''} + ${usereach.hasRole('ROLE_USER') ? ' ' + 'USER' : ''}">
+                        </td>
+                        <td class="align-middle">
+                            <a th:attr="data-user-id=${usereach.id}"
+                               href="#" class="btn btn-primary edit-button">
+                                Edit
+                            </a>
+                        </td>
+
+                        <td class="align-middle">
+                            <button class="btn btn-danger delete-button" th:attr="data-user-id=${usereach.id}"
+                                    href="#">Delete
+                            </button>
+                        </td>
+                    </tr>
+
+
+                    <!-- Модальное окно для редактирования пользователя -->
+                    <div id="editModal" class="modal fade" tabindex="-1" role="dialog">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit User</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body d-flex flex-column align-items-center">
+                                    <form id="editForm" method="POST" action="/admin/update"
+                                          class="d-flex flex-column align-items-center" style="width: 100%;">
+                                        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+                                        <input type="hidden" id="authId" th:value="${authId}">
+                                        <div class="mb-3" style="width: 400px;">
+                                            <label for="username">Enter UserName</label>
+                                            <input type="text" id="username" name="username" class="form-control"
+                                                   required>
+                                        </div>
+                                        <div class="mb-3" style="width: 400px;">
+                                            <label for="email">Enter email</label>
+                                            <input type="email" id="email" name="email" class="form-control" required>
+                                        </div>
+                                        <div class="mb-3" style="width: 400px;">
+                                            <label for="password">Enter New Password</label>
+                                            <input type="password" id="password" name="password" class="form-control"
+                                                   placeholder="New Password" required>
+                                        </div>
+                                        <div class="container mt-4" id="checkboxContainer1">
+                                            <div class="d-flex flex-column p-1 border rounded mx-auto"
+                                                 style="width: 400px;">
+                                                <input type="checkbox" id="roleAdmin" name="selectedRoleIds" value="2"
+                                                       class="custom-checkbox" hidden>
+                                                <label for="roleAdmin" class="custom-checkbox-label">ADMIN</label>
+
+                                                <input type="checkbox" id="roleUser" name="selectedRoleIds" value="1"
+                                                       class="custom-checkbox" hidden>
+                                                <label for="roleUser" class="custom-checkbox-label">USER</label>
+                                            </div>
+                                        </div>
+                                        <br/>
+                                    </form>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close
+                                    </button>
+                                    <input type="submit" value="Edit" class="btn btn-primary" form="editForm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Модальное окно для удаления пользователя -->
+                    <div id="deleteModal" class="modal fade" tabindex="-1" role="dialog">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Delete User</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body d-flex flex-column align-items-center">
+                                    <form id="deleteForm" method="POST" action="/admin/delete"
+                                          class="d-flex flex-column align-items-center" style="width: 100%;">
+                                        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+                                        <input type="hidden" id="authId1" th:value="${authId}">
+                                        <input type="hidden" id="deleteUserId" name="id"/>
+                                        <div class="mb-3" style="width: 400px;">
+                                            <label for="deleteUsername">Username</label>
+                                            <input type="text" id="deleteUsername" name="username" class="form-control"
+                                                   readonly>
+                                        </div>
+                                        <div class="mb-3" style="width: 400px;">
+                                            <label for="deleteEmail">Email</label>
+                                            <input type="email" id="deleteEmail" name="email" class="form-control"
+                                                   readonly>
+                                        </div>
+                                        <div class="mb-3" style="width: 400px;">
+                                            <label for="deleteRoles">Roles</label>
+                                            <input type="text" id="deleteRoles" class="form-control" readonly>
+                                        </div>
+
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        Close
+                                    </button>
+                                    <button type="button" id="confirmDelete" class="btn btn-danger">Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <script>
+                        document.querySelectorAll('.delete-button').forEach(button => {
+                            button.addEventListener('click', function (event) {
+                                event.preventDefault(); // Предотвращаем действие по умолчанию
+
+                                const userId = this.getAttribute('data-user-id'); // Получаем ID пользователя
+                                const authId = document.getElementById('authId1').value; // Получаем ID авторизованного пользователя
+                                console.log('Deleting user with ID:', userId); // Для отладки
+
+                                // Загружаем данные пользователя через AJAX
+                                fetch(`/admin/getUser?id=${userId}`)
+                                    .then(response => {
+                                        if (!response.ok) {
+                                            throw new Error('Ошибка при загрузке данных пользователя');
+                                        }
+                                        return response.json();
+                                    })
+                                    .then(user => {
+                                        console.log('User data:', user); // Для отладки
+
+                                        // Проверяем, что данные пользователя корректны
+                                        if (!user || !user.username || !user.email) {
+                                            throw new Error('Данные пользователя некорректны');
+                                        }
+
+                                        // Заполняем поля формы в модальном окне
+                                        document.getElementById('deleteUsername').value = user.username;
+                                        document.getElementById('deleteEmail').value = user.email;
+
+                                        // Преобразуем роли в строку и отображаем (удаляем префикс ROLE_)
+                                        const roles = user.authorities
+                                            .map(authority => authority.authority.replace('ROLE_', '')) // Удаляем префикс
+                                            .join(' '); // Объединяем роли через пробел
+                                        document.getElementById('deleteRoles').value = roles;
+
+                                        // Устанавливаем ID пользователя в скрытое поле формы удаления
+                                        document.getElementById('deleteUserId').value = userId;
+
+                                        // Открываем модальное окно для удаления
+                                        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+                                        deleteModal.show();
+
+                                        // Обновляем URL с ID пользователя
+                                        const newUrl = `/admin?id=${authId}`; // Замените на ваш путь
+                                        window.history.pushState({id: userId}, '', newUrl);
+                                    })
+                                    .catch(error => {
+                                        console.error('Ошибка при загрузке данных пользователя:', error);
+                                    });
+                            });
+                        });
+
+                        // Обработчик для подтверждения удаления
+                        document.getElementById('confirmDelete').addEventListener('click', function () {
+                            const userId = document.getElementById('deleteUserId').value;
+                            const csrfToken = document.querySelector('input[name="_csrf"]').value;
+
+                            // Выполняем AJAX-запрос для удаления пользователя
+                            fetch(`/admin/delete?id=${userId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': csrfToken // Добавляем CSRF-токен
+                                }
+                            })
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error('Ошибка при удалении пользователя');
+                                    }
+                                    // Закрываем модальное окно
+                                    const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
+                                    deleteModal.hide();
+                                    // Обновляем страницу или удаляем элемент из DOM
+                                    window.location.reload(); // Перезагружаем страницу для обновления списка пользователей
+                                })
+                                .catch(error => {
+                                    console.error('Ошибка при удалении пользователя:', error);
+                                });
+                        });
+
+                        // Обработчик для закрытия модального окна
+                        document.getElementById('deleteModal').addEventListener('hidden.bs.modal', function () {
+                            const authId = document.getElementById('authId1').value;
+                            // Возвращаем URL к /admin с ID авторизованного пользователя
+                            window.history.pushState({}, '', `/admin?id=${authId}`);
+                        });
+                    </script>
+                    </tbody>
+                </table>
+            </div>
+
+
+            <!-- Форма для добавления нового пользователя (скрыта по умолчанию) -->
+            <div id="newUserForm" class="table-container" style="display: none;">
+                <div class="table-header">
+                    <h3>Add New User</h3>
+                    <hr class="divider">
+                </div>
+                <form th:method="POST" th:action="@{/admin/saveUser}" th:object="${user}"
+                      class="d-flex flex-column align-items-center">
+                    <div class="mb-3" style="width: 400px;">
+                        <label for="modal-username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="modal-username" th:field="*{username}" required>
+                        <small class="text-danger" th:if="${#fields.hasErrors('username')}"
+                               th:errors="*{username}"></small>
+                    </div>
+                    <div class="mb-3" style="width: 400px;">
+                        <label for="modal-email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="modal-email" th:field="*{email}" required>
+                    </div>
+                    <div class="mb-3" style="width: 400px;">
+                        <label for="modal-password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="modal-password" th:field="*{password}" required>
+                    </div>
+                    <div class="container mt-4" id="checkboxContainer">
+                        <div class="d-flex flex-column p-1 border rounded mx-auto" style="width: 400px;">
+                            <input type="checkbox" id="option1" name="selectedRoleIds" value="2" class="custom-checkbox"
+                                   hidden>
+                            <label for="option1" class="custom-checkbox-label">ADMIN</label>
+
+                            <input type="checkbox" id="option2" name="selectedRoleIds" value="1" class="custom-checkbox"
+                                   hidden>
+                            <label for="option2" class="custom-checkbox-label">USER</label>
+                        </div>
+                    </div>
+                    <br>
+                    <button type="submit" class="btn btn-success btn-lg">Add new user</button>
+                    <br> <!-- Зеленая кнопка -->
+                </form>
+            </div>
+
+
+            <script>
+                // Функция для показа таблицы
+                function showTable() {
+                    document.getElementById('tableContainer').style.display = 'block';
+                    document.getElementById('newUserForm').style.display = 'none';
+                    setActiveButton("userTableButton")
+                }
+
+                // Функция для показа формы добавления нового пользователя
+                function showNewUserForm() {
+                    document.getElementById('tableContainer').style.display = 'none';
+                    document.getElementById('newUserForm').style.display = 'block';
+                    setActiveButton("newUserButton")
+                }
+
+                function setActiveButton(buttonId) {
+                    // Сбрасываем класс active для всех кнопок
+                    document.getElementById('userTableButton').classList.remove('active');
+                    document.getElementById('newUserButton').classList.remove('active'); // Исправлено
+
+                    // Устанавливаем класс active для нажатой кнопки
+                    document.getElementById(buttonId).classList.add('active');
+                }
+            </script>
+            <script>
+                document.querySelectorAll('.edit-button').forEach(button => {
+                    button.addEventListener('click', function (event) {
+                        event.preventDefault(); // Предотвращаем переход по ссылке
+
+                        const userId = this.getAttribute('data-user-id'); // Получаем ID пользователя
+                        const authId = document.getElementById('authId').value; // Получаем ID авторизованного пользователя
+                        console.log('Editing user with ID:', userId); // Для отладки
+
+                        // Обновляем URL без перезагрузки страницы
+                        const newUrl = `/admin?id=${userId}`; // Замените на ваш путь
+                        window.history.pushState({id: userId}, '', newUrl);
+
+                        const csrfToken = document.querySelector('input[name="_csrf"]').value;
+
+                        // Загружаем данные пользователя через AJAX
+                        fetch(`/admin/getUser?id=${userId}`)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('Ошибка при загрузке данных пользователя');
+                                }
+                                return response.json();
+                            })
+                            .then(user => {
+                                console.log('User data:', user); // Для отладки
+
+                                // Проверяем, что данные пользователя корректны
+                                if (!user || !user.username || !user.email) {
+                                    throw new Error('Данные пользователя некорректны');
+                                }
+
+                                // Заполняем поля формы в модальном окне
+                                document.getElementById('username').value = user.username;
+                                document.getElementById('email').value = user.email;
+                                document.getElementById('password').value = ''; // Оставляем пустым для безопасности
+
+                                // Устанавливаем выбранные роли
+                                const roleCheckboxes = document.querySelectorAll('input[name="selectedRoleIds"]');
+                                if (user.authorities && user.authorities.length > 0) {
+                                    roleCheckboxes.forEach(checkbox => {
+                                        // Проверяем, есть ли роль у пользователя
+                                        const roleId = parseInt(checkbox.value);
+                                        const hasRole = user.authorities.some(authority => {
+                                            const roleName = authority.authority; // Например, "ROLE_ADMIN"
+                                            return (roleName === 'ROLE_ADMIN' && roleId === 2) || (roleName === 'ROLE_USER' && roleId === 1);
+                                        });
+                                        checkbox.checked = hasRole;
+                                    });
+                                } else {
+                                    console.warn('Роли отсутствуют'); // Для отладки
+                                }
+
+                                // Открываем модальное окно для редактирования
+                                const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+                                editModal.show();
+
+                                // Добавляем обработчик для закрытия модального окна
+                                document.getElementById('editModal').addEventListener('hidden.bs.modal', function () {
+                                    // Возвращаем URL к /admin с ID авторизованного пользователя
+                                    window.history.pushState({}, '', `/admin?id=${authId}`);
+
+                                    // Сбрасываем чекбоксы ролей (опционально)
+                                    const roleCheckboxes = document.querySelectorAll('input[name="selectedRoleIds"]');
+                                    roleCheckboxes.forEach(checkbox => {
+                                        checkbox.checked = false; // Сбрасываем состояние чекбокса
+                                    });
+                                });
+                            })
+                            .catch(error => {
+                                console.error('Ошибка при загрузке данных пользователя:', error);
+                            });
+
+                        // Обновляем действие формы (опционально)
+                        const editForm = document.getElementById('editForm');
+                        editForm.setAttribute('action', `/admin/update?id=${userId}`);
+                    });
+                });
+            </script>
+
+        </div>
+    </div>
+</div>
+</body>
+</html>
